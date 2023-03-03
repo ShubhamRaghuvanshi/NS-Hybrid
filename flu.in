@@ -1,0 +1,9 @@
+nn    delta     vis1     vis2                                                                                                               
+64   4.0d-4  1.0d-3   0.0
+maxiter   nrun   navg
+200      1     10
+forcing   fixed_energy1   fixed_energy2   fixed_energy3
+.false.    0.8d0            0.8d0      0.0d0
+particl   nprtcl    nstokes   nrunpart
+.false.    1     12          1
+~                                           

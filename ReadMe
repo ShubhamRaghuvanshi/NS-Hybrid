@@ -1,0 +1,97 @@
+
+//**************INSTALLATION OF DEPENDENCIES****************//
+
+This code requires fftw3 with mpi. To download and install, 
+go to any directory you like and do the follwing,
+
+mkdir dependencies
+cd dependencies
+wget https://www.fftw.org/fftw-3.3.10.tar.gz
+tar -xvzf fftw-3.3.10.tar.gz
+mkdir fftw3_install
+cd fftw3_install
+export install_dir = $PWD (or manually copy output of pwd	) 
+cd ../fftw-3.3.10
+./configure --enable-shared --enable-float --enable-threads --enable-mpi --prefix=$install_dir
+make -j 4
+make install
+
+(Now install once more without --enable-float this will install fftw for double precision)
+
+./configure --enable-shared --enable-threads --enable-mpi --prefix=$install_dir
+make -j 4
+make install
+
+(In case MPI is installed in standard location just add following lines to .bashrc 
+or write a textfile named 'libpaths' and run 'source libpaths')
+
+export LD_LIBRARY_PATH=(path to fftw3_install)/lib:$LD_LIBRARY_PATH
+export PATH=(path to fftw3_install)/bin:$PATH
+
+	
+(In case MPI is not installed in standard location, you need to provide it's install path in Makefile
+To install MPI in a non standard location do the following)
+
+cd dependencies
+wget http://www.mpich.org/static/downloads/3.3.2/mpich-3.3.2.tar.gz
+mkdir mpi_install
+cd mpi_install
+export install_dir = $PWD (or manually copy output of pwd	) 
+cd ../mpich-3.3.2
+./configure --prefix=$install_dir
+make -j 4 
+make install
+
+(Now add following lines to .bashrc or write a textfile named 
+'libpaths' and run 'source libpaths')
+
+export LD_LIBRARY_PATH=(path to fftw3_install)/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=(path to mpi_install)/lib:$LD_LIBRARY_PATH
+
+export PATH=(path to fftw3_install)/bin:$PATH
+export PATH=(path to mpi_install)/bin:$PATH
+
+
+//***************************************************//
+
+
+//**************RUNNING CODE VIA BASH********************//
+
+(1) Set the number of openmp threads to (say) 8 by
+
+export OMP_NUM_THREADS=8
+
+(2) In order to run the executible with (say) 4 number of processsors do 
+
+mpirun -np 4 ./part.exe
+
+(3) Extremely important to run 'killall part.exe' after you terminate the code
+    with keyboard interrupt (say with 'Ctrl+C' or 'Ctrl+Z'). Otherwise some 
+    processes may keep running in the background. As an alternative you 
+    could run it via the bash script 'traprun.sh' by 'bash traprun.sh'. This can 
+    catch 'Ctrl+C' interrupt but not 'Ctrl+Z' so be careful with that.
+    
+(4) Also run 'killall part.exe' in case the code encounters MPI communicator errors.    
+     	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

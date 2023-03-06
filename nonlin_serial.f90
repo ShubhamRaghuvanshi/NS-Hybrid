@@ -11,7 +11,8 @@
 !	use fourier
 	implicit none
 	real*8 :: cvr1,cvc1,cvr2,cvc2,cvr3,cvc3,w1,w2,w3,rv1,rv2,rv3
-	integer ::i1,i2,i3,k1,k2,k3,ireal,iimag,j,i4
+	integer ::i1,i2,i3,ireal,iimag,j,i4
+	real*8 :: k1,k2,k3
 	character(1000)::fnum1        
 !! ---variables defined for fourier transform -----
 !! --- everest  -----------------------------
@@ -75,13 +76,13 @@
 !$omp end do
 !$omp end parallel
 
+
 	call dermat_serial
-
-
 
 !! -----------------------------------------------------------------
 !! step ii : inv-fft Wk to real space, do the inv-fft in-place
 !! ------------using FFTW ----------
+	
 	call fftw_c2r_3D(Wk1)
 	call fftw_c2r_3D(Wk2)
 	call fftw_c2r_3D(Wk3)	
@@ -95,9 +96,12 @@
 		Wk2(i1,:,:) = 0.0d0
 		Wk3(i1,:,:) = 0.0d0
 	enddo
+
 	Wk1 = Wk1*scale
 	Wk2 = Wk2*scale
 	Wk3 = Wk3*scale
+
+		
 !! -----------------------------------------------------------------     
 !! ------------using FFTW ----------
 	call fftw_c2r_3D(Vk1)
@@ -117,6 +121,21 @@
 	Vk1 = Vk1*scale
 	Vk2 = Vk2*scale
 	Vk3 = Vk3*scale
+
+	!	do itask = 0, NTask-1
+	!		call MPI_Barrier(MPI_COMM_WORLD, ierror)
+	!		if (itask .eq. ThisTask ) then 
+	!	do i3 = 1,local_n3
+	!		do i2 = 1,n2
+	!			do i1 =1,n1
+	!		  write(*,*)i1, i2, i3+ n3_low-1, Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3)
+	!			end do
+	!		end do 
+	!	end do 	
+	!	end if
+	!	end do 
+
+
 !------------- Calculate energy injection rate-----------------------
    umax1=maxval(abs(Vk1))
    umax2=maxval(abs(Vk2))

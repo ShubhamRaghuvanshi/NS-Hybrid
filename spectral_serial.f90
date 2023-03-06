@@ -43,14 +43,15 @@
 		open(unit=101, file='NPROC', action='read')
 		read(101, *) n_proc
 		close(101)
-		write(*,*) 'Number of processes : ',NTask
-		write(*,*) 'Number of threads per process= ',nthreads		
-		if(nthreads*NTask .gt. n_proc) then 
-			write(*,*) 'Maximum number of processes exceeded for this machine, Aborting'
-			call endrun(666) 
-		end if 
+!		write(*,*) 'Number of processes : ',NTask
+!		write(*,*) 'Number of threads per process= ',nthreads		
+!		if(nthreads*NTask .gt. n_proc) then 
+!			write(*,*) 'Maximum number of processes exceeded for this machine, Aborting'
+!			call endrun(666) 
+!		end if 
 	end if
 
+!	call open_output_files
 
 
 	call initialise_variable
@@ -71,6 +72,7 @@
 	if (ThisTask .eq. 0) then 	
 		open(unit=110,file='initial_spectra.out',status='unknown')
 			do ispectra = 0,nshell
+			!write(*,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
 			write(110,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
 		enddo
 		close(110)
@@ -79,7 +81,7 @@
 	Omega = sum(E_Omega(:,2))
 !---------------
 	
-	call open_output_files
+	
 
 !	if (particl) then 
 !		call initialize_particle

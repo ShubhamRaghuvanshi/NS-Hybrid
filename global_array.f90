@@ -60,7 +60,7 @@
 	allocate(forced_modes1(mode_no1,4),forced_modes2(mode_no2,4), & 
                                     forced_modes3(mode_no3,4))
 
-!	write(*,*) 'GLOBAL', ThisTask, local_n3, size(forced_modes1), mode_no1*4
+	!write(*,*) 'GLOBAL', local_n3, size(forced_modes1), mode_no1*4, mode_no2*4, mode_no3*4
 	if (ThisTask .eq. 0) then 
 		forced_modes1 = 0.0d0
 		forced_modes2 = 0.0d0
@@ -79,11 +79,11 @@
 		lmin = -4+1
 		lmax = 4+1	
 	
-		do k= kmin, kmax
-			k3 = (k-1) - n3*(k/(n1hf+1))	
-			do j=jmin, jmax
-				k2 = (j-1) - n2*(j/(n1hf+1))	
-				do l=lmin, lmax
+	do k=1,n3
+		k3 = (k-1) - n3*(k/(n1hf+1))	
+		do j=1,n2
+			k2 = (j-1) - n2*(j/(n1hf+1))	
+			do l=1,n1hf
 					k1=l-1
 					!! -------------
 					ksqr = k1*k1 + k2*k2 + k3*k3
@@ -136,13 +136,19 @@
 		enddo
 	end if 
 	call MPI_Barrier(MPI_COMM_WORLD, ierror)
+
+	call MPI_Bcast(count1 , 1, MPI_INT, 0, MPI_COMM_WORLD, ierror)
+	call MPI_Bcast(count2 , 1, MPI_INT, 0, MPI_COMM_WORLD, ierror)
+	call MPI_Bcast(count3 , 1, MPI_INT, 0, MPI_COMM_WORLD, ierror)
+
 	call MPI_Bcast(forced_modes1 , mode_no1*4, MPI_INT, 0, MPI_COMM_WORLD, ierror)
 	call MPI_Bcast(forced_modes2 , mode_no1*4, MPI_INT, 0, MPI_COMM_WORLD, ierror)
 	call MPI_Bcast(forced_modes3 , mode_no1*4, MPI_INT, 0, MPI_COMM_WORLD, ierror)
 
+
 	
 	!! -------------checks ----------------------------------------
-	if (ThisTask .eq. 0) then 
+	if (ThisTask .eq. 3) then 
 		open(unit=200,file='density_of_states.out',status='unknown')
 		do itrial1 = 0,nshell
 			write(200,*)itrial1,den_state(itrial1)

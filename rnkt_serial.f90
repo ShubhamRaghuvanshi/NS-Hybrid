@@ -136,7 +136,10 @@
 	enddo
 !! -the corrector step ----------------------------------
 !! -------evaluating the non-linear part ----------------
+
+	!uncomment
 	call nonlin_serial
+
 !! --Vk1 at this stage is velocity in real space not fourier space,
 !! the contribution from the velocity in fourier space is already 
 !! stored in the arrasys tm1. we set Vk1 to zero here.----------

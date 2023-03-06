@@ -56,7 +56,7 @@ integer :: ThisTask, NTask, ierror, itask, iret, n_proc
 integer (C_INTPTR_T) :: n1,n2,n3, n1h,n1hf
 integer (C_INTPTR_T) :: alloc_local, local_n3_offset, local_n3
 real(C_DOUBLE), pointer :: r_data(:,:,:)
-complex(kind=8), pointer :: c_data(:,:,:)
+complex(C_DOUBLE_COMPLEX), pointer :: c_data(:,:,:)
 integer*8 :: n3_low, n3_high, indx3
 
 !! -----------For FFTW --------------------------------------

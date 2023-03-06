@@ -72,6 +72,8 @@
 		dz=length/dble(n3)
 		dt_by_dx=delta/dx   
 
+		
+
 		!! %allocate and calculate the global arrays --------
 		allocate(den_state(0:nshell))
 		allocate(den_state_total(0:nshell))
@@ -182,10 +184,9 @@
 		ampli=3.0
 		iseed =80629.0 + real(3.0*ThisTask)
 		n_cube = dfloat(n1)*dfloat(n2)*dfloat(n3)
-		indx3 = 0 
     call random_number(ran)
 		do i3 = n3_low,n3_high
-			indx3 = indx3 + 1
+			indx3 = i3 - n3_low + 1
 			k3 = (i3-1) - n3*(i3/(n1hf+1))	
 			do i2 = 1,n2
 				k2 = (i2-1) - n2*(i2/(n1hf+1))	
@@ -195,13 +196,15 @@
 					rk2 = factor*factor*dfloat(ksqr)
 					rk = dsqrt(rk2)
 					mshl = nint(rk)
-          ek1 = amp*1.0d0*rk2*rk2*exp(-2.0d0*rk2/(kini*kini))
+          !ek1 = amp*1.0d0*rk2*rk2*exp(-2.0d0*rk2/(kini*kini))
+          ek1 = 1.0d0*rk2*rk2*exp(-2.0d0*rk2)
 					vk =  dsqrt(ek1/(3*den_state(mshl)))
 					vk = vk * n_cube 
 					ireal=2*i1-1
 					iimag=2*i1
           if(k1.ne.0)then
-            call random_number(ran)
+            !call random_number(ran)
+            ran = 1.0d0
           else
             ran = 0.0d0
           endif
@@ -232,6 +235,7 @@
 						p31=p23 
 					endif
 					!!-----------------
+					!write(*,*) i1, i2, i3, vk
 					Vk1(ireal,i2,indx3)=p11*Vk1_real+p12*Vk2_real+p31*Vk3_real
 					Vk1(iimag,i2,indx3)=p11*Vk1_imag+p12*Vk2_imag+p31*Vk3_imag
 
@@ -262,6 +266,19 @@
 			Vk2(2,1,1) = 0.0d0
 			Vk3(2,1,1) = 0.0d0
 		end if
+
+!		do itask = 0, NTask-1
+!			call MPI_Barrier(MPI_COMM_WORLD, ierror)
+!			if (itask .eq. ThisTask ) then 
+!		do i3 = 1,local_n3
+!			do i2 = 1,n2
+!				do i1 =1,n1
+!			  write(*,*)i1, i2, i3+ n3_low-1, Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3)
+!				end do
+!			end do 
+!		end do 	
+!		end if
+!		end do 
 	
 	else
 		do itask = 0, NTask-1

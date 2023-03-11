@@ -9,8 +9,11 @@
 	subroutine read_input_params
 		do itask = 0, NTask -1
 			call MPI_Barrier(MPI_COMM_WORLD, ierror)
-			if (itask .eq. ThisTask ) then 
-	  		open(unit=10,file='flu.in',status='old')
+			if (itask .eq. ThisTask ) then
+				smallstring =trim("/flu.in") 
+				bigstring= trim(cur_dir)//trim(smallstring)
+				write(*,*) 'bigstring : ',bigstring
+	  		open(unit=10,file=bigstring,status='old')
   			read(10,*)
   			read(10,*)nn,delta,vis,vis2
 				read(10,*)
@@ -203,8 +206,8 @@
 					ireal=2*i1-1
 					iimag=2*i1
           if(k1.ne.0)then
-            !call random_number(ran)
-            ran = 1.0d0
+            call random_number(ran)
+            !ran = 1.0d0
           else
             ran = 0.0d0
           endif
@@ -370,25 +373,4 @@ subroutine endrun(ierr)
 end subroutine endrun
 	
 end module mod_initial
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

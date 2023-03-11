@@ -27,6 +27,9 @@
 	call  dfftw_init_threads(iret)
 
 	!! %---read initial params ----
+	call get_command_argument(1,cur_dir)
+	!cur_dir = trim(cur_dir)
+	write(*,*) 'CURDIR = ', trim(cur_dir)//'currrrr'
 	call read_input_params
 
 	!---------------------
@@ -37,14 +40,23 @@
     
  		!$OMP END MASTER
 		!$OMP END PARALLEL
-		call system('rm -rf vel spectra euler')
-		call system('mkdir vel spectra euler')
-		call system('getconf _NPROCESSORS_ONLN  > NPROC')
-		open(unit=101, file='NPROC', action='read')
+		bigstring='rm -rf '//trim(cur_dir)//'vel '//cur_dir//'spectra '//cur_dir//'euler'
+		write(*,*) 'First command ',bigstring
+	  call system(bigstring)
+	  bigstring='mkdir '//cur_dir//'vel '//cur_dir//'spectra '//cur_dir//'euler'
+		write(*,*) 'First command ',bigstring
+    call system(bigstring)
+    bigstring='getconf _NPROCESSORS_ONLN  > '//cur_dir//'NPROC'
+    write(*,*) 'First command ',bigstring
+		call system(bigstring)
+		open(unit=101, file=cur_dir//'NPROC', action='read')
 		read(101, *) n_proc
 		close(101)
-!		write(*,*) 'Number of processes : ',NTask
-!		write(*,*) 'Number of threads per process= ',nthreads		
+		bigstring='rm '//cur_dir//'NPROC'
+    call system(bigstring)
+		write(*,*) 'Number of processes : ',NTask
+		write(*,*) 'Number of threads per process : ',nthreads	
+!    write(*,*) 'Current Directory : ', cur_dir	
 !		if(nthreads*NTask .gt. n_proc) then 
 !			write(*,*) 'Maximum number of processes exceeded for this machine, Aborting'
 !			call endrun(666) 
@@ -70,7 +82,7 @@
 	En = 0.0d0
 	Omega = 0.0d0
 	if (ThisTask .eq. 0) then 	
-		open(unit=110,file='initial_spectra.out',status='unknown')
+		open(unit=110,file=cur_dir//'/initial_spectra.out',status='unknown')
 			do ispectra = 0,nshell
 			!write(*,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
 			write(110,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
@@ -131,9 +143,9 @@ if (ThisTask .eq. 0) then
 			Rlambda = vkrms*tlr_micro_scale/vis
       c_cfl=umax*dt_by_dx                         
 			time = (iter*delta*vkrms)/(2.0d0*pi)	
-			write(200,*)time,En,Omega  
+			write(200,*)iter,time,En,Omega  
       write(201,*)Rlambda,c_cfl
-			write(*,*)time,En,Omega  
+			write(*,*)iter,time,En,Omega  
 end if 			
 		enddo
 !! writing the spectra after every navg number of steps

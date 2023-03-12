@@ -52,6 +52,9 @@
 
 !process related
 integer :: ThisTask, NTask, ierror, itask, iret, n_proc
+character(50) smallstring, cur_dir
+character(100) bigstring 
+
 !data related
 integer (C_INTPTR_T) :: n1,n2,n3, n1h,n1hf
 integer (C_INTPTR_T) :: alloc_local, local_n3_offset, local_n3

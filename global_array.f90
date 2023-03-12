@@ -148,25 +148,25 @@
 
 	
 	!! -------------checks ----------------------------------------
-	if (ThisTask .eq. 3) then 
-		open(unit=200,file='density_of_states.out',status='unknown')
+	if (ThisTask .eq. 0) then 
+		open(unit=321,file=trim(cur_dir)//'/density_of_states.out',status='unknown')
 		do itrial1 = 0,nshell
-			write(200,*)itrial1,den_state(itrial1)
+			write(321,*)itrial1,den_state(itrial1)
 		enddo
-		write(200,*)count1,count2,count3
-		write(200,*) 'mode 1'
+		write(321,*)count1,count2,count3
+		write(321,*) 'mode 1'
 		do itrial1 = 1,count1
-			write(200,*) itrial1,(forced_modes1(itrial1,jtrial),jtrial=1,4)
+			write(321,*) itrial1,(forced_modes1(itrial1,jtrial),jtrial=1,4)
 		enddo
-		write(200,*) 'mode 2'
+		write(321,*) 'mode 2'
 		do itrial1 = 1,count2
-			write(200,*) itrial1,(forced_modes2(itrial1,jtrial),jtrial=1,4)
+			write(321,*) itrial1,(forced_modes2(itrial1,jtrial),jtrial=1,4)
 		enddo
-		write(200,*) 'mode 3'
+		write(321,*) 'mode 3'
 		do itrial1 = 1,count3
-			write(200,*) itrial1,(forced_modes3(itrial1,jtrial),jtrial=1,4)
+			write(321,*) itrial1,(forced_modes3(itrial1,jtrial),jtrial=1,4)
 		enddo
-		close(200)	
+		close(321)	
 	end if 
 	!! -------------------------------------------------------------------			
 	end subroutine global_array

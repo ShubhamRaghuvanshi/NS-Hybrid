@@ -149,20 +149,6 @@
 	!	if (mod(cnt,20)==0) call write_output_particle
 	!endif
 
-! Writing the real space velocities to the fil after every navg steps
-	if(mod(cnt,1000*navg)==0) then
-		do itask = 0, NTask-1
-			call MPI_Barrier(MPI_COMM_WORLD, ierror)
-			if (itask .eq. ThisTask ) then      		
-				vel_writer = vel_writer + 1 
-			  write(fnum1,'(g8.0)') vel_writer 
-			  open(unit=11,file='vel/Vk'//trim(adjustl(fnum1))//'.in',form='unformatted',status='unknown')
-			  write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
-			 	i1=1,n1),i2=1,n2),i3=1,local_n3)
-			  close(11)
-			end if 
-		end do
-	end if
 !! ------------------------------------------------------------------
 !! step iv : find VXOmega in real space , and overwrite it in the 
 !! array Wk ------------------------------------------------------ 

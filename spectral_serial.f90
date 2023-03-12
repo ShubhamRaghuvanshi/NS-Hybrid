@@ -12,11 +12,11 @@
 !	use mod_particle
 	implicit none
 	!! other defination of variables 
-	integer :: ispectra,i1,i2,i3,iouter,inner,iter,p
-	integer :: itrial1,icall
+	integer :: ispectra,i1,i2,i3,iouter,inner,iter
+	integer :: itrial1
   real*8 :: En,Omega,sumEkbyk,realk,time !,OMP_get_wtime
   character(1000)::fnum
-	character*500::cnpar,formp
+	!character*500::cnpar,formp
 
 
 	!! % Initialise MPI and fftw_mpi--------------------------------
@@ -26,49 +26,19 @@
 	call  fftw_mpi_init()
 	call  dfftw_init_threads(iret)
 
-	!! %---read initial params ----
-	call get_command_argument(1,cur_dir)
-	!cur_dir = trim(cur_dir)
-	write(*,*) 'CURDIR = ', trim(cur_dir)//'currrrr'
+	call get_command_argument(1,cur_dir)			
+	if( len( trim( cur_dir) ) < 2 ) then 
+		write(*,*) 'Output directory not provided, Aborting'
+		call endrun(214)
+	end if 	
+
+	
 	call read_input_params
 
-	!---------------------
-	if (ThisTask .eq. 0) then 
-		!$OMP PARALLEL 
-		!$OMP MASTER
- 		call get_total_threads(nthreads) 
-    
- 		!$OMP END MASTER
-		!$OMP END PARALLEL
-		bigstring='rm -rf '//trim(cur_dir)//'vel '//cur_dir//'spectra '//cur_dir//'euler'
-		write(*,*) 'First command ',bigstring
-	  call system(bigstring)
-	  bigstring='mkdir '//cur_dir//'vel '//cur_dir//'spectra '//cur_dir//'euler'
-		write(*,*) 'First command ',bigstring
-    call system(bigstring)
-    bigstring='getconf _NPROCESSORS_ONLN  > '//cur_dir//'NPROC'
-    write(*,*) 'First command ',bigstring
-		call system(bigstring)
-		open(unit=101, file=cur_dir//'NPROC', action='read')
-		read(101, *) n_proc
-		close(101)
-		bigstring='rm '//cur_dir//'NPROC'
-    call system(bigstring)
-		write(*,*) 'Number of processes : ',NTask
-		write(*,*) 'Number of threads per process : ',nthreads	
-!    write(*,*) 'Current Directory : ', cur_dir	
-!		if(nthreads*NTask .gt. n_proc) then 
-!			write(*,*) 'Maximum number of processes exceeded for this machine, Aborting'
-!			call endrun(666) 
-!		end if 
-	end if
-
-!	call open_output_files
-
+	call open_output_files
 
 	call initialise_variable
-
-
+	
 	call global_array
 
 
@@ -79,34 +49,64 @@
 	
 	call energy_serial 
 
-	En = 0.0d0
-	Omega = 0.0d0
-	if (ThisTask .eq. 0) then 	
-		open(unit=110,file=cur_dir//'/initial_spectra.out',status='unknown')
-			do ispectra = 0,nshell
+!	En = 0.0d0
+!	Omega = 0.0d0
+!	if (ThisTask .eq. 0) then 	
+!		open(unit=110,file=trim(cur_dir)//'/initial_spectra.out',status='unknown')
+!			do ispectra = 0,nshell
 			!write(*,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
-			write(110,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
-		enddo
-		close(110)
-	end if
-	En = sum(E_Omega(:,1))
-	Omega = sum(E_Omega(:,2))
+!			write(110,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
+!		enddo
+!		close(110)
+!	end if
+!	En = sum(E_Omega(:,1))
+!	Omega = sum(E_Omega(:,2))
 !---------------
 	
-	
-
 !	if (particl) then 
 !		call initialize_particle
 !		call open_output_particle
 !	endif
 
-  vel_writer = 0
-	iter = 0; cnt = 0      
+	iter = 0 
+	cnt = 0      
 !	t1=OMP_get_wtime()
 	call cpu_time(t1)
 	do iouter = 1,maxiter/navg
 	  call MPI_Barrier(MPI_COMM_WORLD, ierror)
 		count_out=iouter
+
+	! Writing the real space velocities to the fil after every navg steps
+		if(mod(iter,navg) .eq. 0) then
+			write(fnum,'(g8.0)') iouter 
+			write(smallstring,'(g8.0)') ThisTask
+			bigstring=trim(cur_dir)//'/vel/Vk'//trim(adjustl(fnum))//'_'//trim(adjustl(smallstring))//'.in' 
+			open(unit=11,file=bigstring, status='unknown', action='write',form='unformatted')
+			write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+				i1=1,n1),i2=1,n2),i3=1,local_n3)
+			close(11)
+
+			bigstring=trim(cur_dir)//'/vel/VWk'//trim(adjustl(fnum))//'_'//trim(adjustl(smallstring))//'.in' 
+			open(unit=12,file=bigstring, status='unknown', action='write',form='unformatted')
+			write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+														   i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+			close(12)
+		end if 
+
+	!! writing the spectra after every navg number of steps
+	!!------------------------------------------------------
+		if (ThisTask .eq. 0) then
+			if(mod(iter,navg).eq.0) then
+				write(fnum,'(g8.0)') iouter
+				open(unit=224,file=trim(cur_dir)//'/spectra/spectra'//trim(adjustl(fnum))//'.out',status='unknown')
+				do ispectra= 0,nshell
+					write(224,*)ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
+				end do
+				close(224)
+			end if
+		end if     
+	!!------------------------------------------------------
+		call MPI_Barrier(MPI_COMM_WORLD, ierror)
 		do inner = 1,navg
 	    iter = iter + 1
       cnt = iter
@@ -115,87 +115,71 @@
 			
       call rnkt_serial
 
-!! first go to the CM frame of the fluid 
-if (ThisTask .eq. 0) then 
-			Vk1(1,1,1) = 0.0d0
-			Vk2(1,1,1) = 0.0d0
-			Vk3(1,1,1) = 0.0d0 
-!this sets the real part to be zero, the imaginary part
-!should be zero anyway, otherwise  the real space 
-!velocities wont be real. But we still set them to zero.
-			Vk1(2,1,1) = 0.0d0
-			Vk2(2,1,1) = 0.0d0
-			Vk3(2,1,1) = 0.0d0
-end if
-!! and after each call the forcing function is enforced. 
+			!! first go to the CM frame of the fluid 
+			if (ThisTask .eq. 0) then 
+				Vk1(1,1,1) = 0.0d0
+				Vk2(1,1,1) = 0.0d0
+				Vk3(1,1,1) = 0.0d0 
+			!this sets the real part to be zero, the imaginary part
+			!should be zero anyway, otherwise  the real space 
+			!velocities wont be real. But we still set them to zero.
+				Vk1(2,1,1) = 0.0d0
+				Vk2(2,1,1) = 0.0d0
+				Vk3(2,1,1) = 0.0d0
+			end if
+			!! and after each call the forcing function is enforced. 
 			
 			E_Omega = 0.0d0
 			call energy_serial
-if (ThisTask .eq. 0) then 			
-			En = 0.0d0
-			Omega = 0.0d0
-			SumEkbyk=0.0d0
-			En = sum(E_Omega(:,1))
-			Omega = sum(E_Omega(:,2))
-			tlr_micro_scale = dsqrt(En/Omega)
-			vkrms = dsqrt(2.0d0*En/3.0d0)
-!! The Taylor Micro Scale Reynolds number 
-			Rlambda = vkrms*tlr_micro_scale/vis
-      c_cfl=umax*dt_by_dx                         
-			time = (iter*delta*vkrms)/(2.0d0*pi)	
-			write(200,*)iter,time,En,Omega  
-      write(201,*)Rlambda,c_cfl
-			write(*,*)iter,time,En,Omega  
-end if 			
+			if (ThisTask .eq. 0) then 			
+				En = 0.0d0
+				Omega = 0.0d0
+				SumEkbyk=0.0d0
+				En = sum(E_Omega(:,1))
+				Omega = sum(E_Omega(:,2))
+				tlr_micro_scale = dsqrt(En/Omega)
+				vkrms = dsqrt(2.0d0*En/3.0d0)
+				!! The Taylor Micro Scale Reynolds number 
+				Rlambda = vkrms*tlr_micro_scale/vis
+      	c_cfl=umax*dt_by_dx                         
+				time = (iter*delta*vkrms)/(2.0d0*pi)	
+				write(200,*)iter,time,En,Omega  
+      	write(201,*)Rlambda,c_cfl
+				write(*,*)iter,time,En,Omega  
+			end if 			
 		enddo
-!! writing the spectra after every navg number of steps
-!!------------------------------------------------------
-	if (ThisTask .eq. 0) then
-		if(mod(cnt,navg).eq.0) then
-			write(fnum,'(g8.0)') iouter
-			open(unit=224,file='spectra/spectra'//trim(adjustl(fnum))//'.out',status='unknown')
-			do ispectra= 0,nshell
-				write(224,*)ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
-			end do
-			close(224)
-		end if
-	end if     
-!!------------------------------------------------------
-!	open(unit=11,file='vel/Vk'//trim(adjustl(fnum))//'.in',form='unformatted',status='unknown')
-!	write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
-!         i1=1,n1+2),i2=1,n2),i3=1,n3)
-!	close(11)
 	enddo
+
 	!t2=OMP_get_wtime()
 	call cpu_time(t2)
 !! First write down the velocity arrays. 
-do itask = 0, NTask-1
-	call MPI_Barrier(MPI_COMM_WORLD, ierror)
-	if (itask .eq. ThisTask ) then      
-		open(unit=11,file='Vk.in',form='unformatted',status='unknown')
-		write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
-         i1=1,n1+2),i2=1,n2),i3=1,local_n3)
-		close(11)
-		!!  and box(t - delta t) from file. 
-		open(unit=12,file='VXW.in',form='unformatted',status='unknown')
-		write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
-         i1=1,n1+2),i2=1,n2),i3=1,local_n3)
-		close(12)
-	end if 
-end do 
+
+	write(smallstring,'(g8.0)') ThisTask
+	bigstring=trim(cur_dir)//'/Vk'//'_'//trim(adjustl(smallstring))//'.in'
+	open(unit=11,file=bigstring,form='unformatted',status='unknown')
+	write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+											  i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+	close(11)
+
+	bigstring=trim(cur_dir)//'/VXW'//'_'//trim(adjustl(smallstring))//'.in'
+	open(unit=12,file=bigstring,form='unformatted',status='unknown')
+	write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+											     i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+	close(12)
 
 if (ThisTask .eq. 0) then
 	En = 0.0d0
 	Omega = 0.0d0
 	sumEkbyk = 0.0d0
-	write(110,*)
+	open(unit=55,file=trim(cur_dir)//'/final_spectra.out',status='unknown')
+	write(55,*)
 	do ispectra = 1,nshell
 		En = En + E_Omega(ispectra,1)
 		Omega = Omega + E_Omega(ispectra,2)
 		sumEkbyk = sumEkbyk + E_Omega(ispectra,1)/dfloat(ispectra)  
-		write(110,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
+		write(55,*) ispectra,E_Omega(ispectra,1),E_Omega(ispectra,2)
 	enddo
-	close(110)
+	close(55)
 !! The total energy and dissipation is then used to calculate 
 !! the other averaged quantities which characterise the simulation.
 !! The energy dissipation rate $\epsilon = \nu \Omega $         
@@ -216,7 +200,7 @@ if (ThisTask .eq. 0) then
 !! Eq (6.259) and Eq (6.260). 
 !! The parameter characterising the simulation are written down in the
 !! file parameters.out 
-	open(unit=112,file='parameters.out',status='unknown')
+	open(unit=112,file=trim(cur_dir)//'/parameters.out',status='unknown')
 	write(112,*) 'viscosity (nu)    :',vis,' hyperviscosity (\nu_h)  :',vis2
 	write(112,*) 'energy diss-rate(epsilon)  :',edr
 	write(112,*) 'Mean Energy                 :',En
@@ -231,7 +215,7 @@ if (ThisTask .eq. 0) then
 	write(112,*) 'no. of itn for tau_eddy',tau_eddy/delta
 	write(112,*) 'averaging done over',tau_eddy/(delta*maxiter),'tau_{eddy} times'
 	close(112)
-	!close(200)
+	close(200)
 	close(201)
 	close(202)
 	!close(13)

@@ -40,6 +40,13 @@
 	Vk3 = tm3
 	!! -----------------------------------------------------------
 
+!$omp parallel &
+!$omp shared(Wk1,Wk2,Wk3,Vk1,Vk2,Vk3,tm1,vis,tm2,tm3,factor,n2,n3,n1hf,delta1)&
+!$omp private(i1,i2,i3,indx3,k1,k2,k3,ireal,iimag,rk2,ksqr,rk2inv,&
+!$omp tr1,tc1,tr2,tc2,tr3,tc3,veff,p11,p22,p33,p12,p23,p31) 
+!$omp do
+
+
 	do i3 = n3_low,n3_high
 		indx3 = i3 - n3_low + 1
 		k3 = (i3-1) - n3*(i3/(n1hf+1))	
@@ -134,6 +141,10 @@
 			enddo
 		enddo
 	enddo
+	
+!$omp end do
+!$omp end parallel
+	
 !! -the corrector step ----------------------------------
 !! -------evaluating the non-linear part ----------------
 
@@ -146,6 +157,14 @@
 	Vk1 = 0.0d0
 	Vk2 = 0.0d0
 	Vk3 = 0.0d0
+
+!$omp parallel &
+!$omp shared(Wk1,Wk2,Wk3,Vk1,Vk2,Vk3,tm1,vis,tm2,tm3,factor,n2,n3,n1hf,delta1)&
+!$omp private(i1,i2,i3,indx3,k1,k2,k3,ireal,iimag,rk2,ksqr,rk2inv,&
+!$omp tr1,tc1,tr2,tc2,tr3,tc3,veff,p11,p22,p33,p12,p23,p31) 
+!$omp do
+
+	
 !! --the corrector time-stepping -------------------------------------
 	do i3 = n3_low,n3_high
 		indx3 = i3 - n3_low + 1
@@ -218,6 +237,10 @@
 			enddo
 		enddo
 	enddo
+
+!$omp end do
+!$omp end parallel
+	
 !! -----------------------------------------------------------------
 	deallocate(tm1,tm2,tm3)
 !! ------------------------

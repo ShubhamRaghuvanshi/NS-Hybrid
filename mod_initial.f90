@@ -10,10 +10,10 @@
 		do itask = 0, NTask -1
 			call MPI_Barrier(MPI_COMM_WORLD, ierror)
 			if (itask .eq. ThisTask ) then
-				smallstring =trim("/flu.in") 
-				bigstring= trim(cur_dir)//trim(smallstring)
-				write(*,*) 'bigstring : ',bigstring
-	  		open(unit=10,file=bigstring,status='old')
+				!smallstring =trim("/flu.in") 
+				!bigstring= trim(cur_dir)//trim(smallstring)
+				!write(*,*) 'bigstring : ',trim(cur_dir)//'/flu.in'
+	  		open(unit=10,file=trim(cur_dir)//'/flu.in',status='old')
   			read(10,*)
   			read(10,*)nn,delta,vis,vis2
 				read(10,*)
@@ -154,25 +154,69 @@
 !------------------------------------------------------------------------------------------
 
 	subroutine open_output_files
+		!---------------------
 		if (ThisTask .eq. 0) then 
-			open(unit=200,file='energy.dat',status='unknown')
-			open(unit=201,file='params.dat',status='unknown')
-			open(unit=202,file='energy_injection.dat',status='unknown')
+			!! %---read initial params ----
+			
+			!$OMP PARALLEL 
+			!$OMP MASTER
+ 			call get_total_threads(nthreads) 
+ 			!$OMP END MASTER
+			!$OMP END PARALLEL
+			
+			bigstring='rm -rf '//trim(cur_dir)//'/vel/'
+			!write(*,*) 'First command ',bigstring
+			call system(bigstring)
 
-			!!  open(unit=15,file='euler/uxe.out',status='unknown')
-			!!  open(unit=16,file='euler/uye.out',status='unknown')
-			!!  open(unit=17,file='euler/uze.out',status='unknown')
+			bigstring='rm -rf '//trim(cur_dir)//'/spectra/'
+			call system(bigstring)
+	
+			bigstring='rm -rf '//trim(cur_dir)//'/euler/'
+			call system(bigstring)
+
+			bigstring='mkdir '//trim(cur_dir)//'/vel/'
+			call system(bigstring)
+
+			bigstring='mkdir '//trim(cur_dir)//'/spectra/'
+			call system(bigstring)
+
+			bigstring='mkdir '//trim(cur_dir)//'/euler/'
+			call system(bigstring)
+    
+  	  bigstring='getconf _NPROCESSORS_ONLN  > '//trim(cur_dir)//'/NPROC'
+			call system(bigstring)
+
+			open(unit=101, file=trim(cur_dir)//'/NPROC', action='read')
+			read(101, *) n_proc
+			close(101)
+			bigstring='rm '//trim(cur_dir)//'/NPROC'
+		  call system(bigstring)
+			write(*,*) 'Number of processes : ',NTask
+			write(*,*) 'Number of threads per process : ',nthreads	
+			write(*,*) 'Number of points : ',nn
+		  write(*,*) 'Current Directory : ', cur_dir	
+			!		if(nthreads*NTask .gt. n_proc) then 
+			!			write(*,*) 'Maximum number of processes exceeded for this machine, Aborting'
+			!			call endrun(666) 
+			!		end if 
+			open(unit=200,file=trim(cur_dir)//'/energy.dat',status='unknown')
+			open(unit=201,file=trim(cur_dir)//'/params.dat',status='unknown')
+			open(unit=202,file=trim(cur_dir)//'/energy_injection.dat',status='unknown')
+
+			!  open(unit=15,file=trim(cur_dir)//'euler/uxe.out',status='unknown')
+			!  open(unit=16,file=trim(cur_dir)//'euler/uye.out',status='unknown')
+			!  open(unit=17,file=trim(cur_dir)//'euler/uze.out',status='unknown')
 		
-			!open(unit=18,file='euler/dx_uxe.out',status='unknown')
-			!open(unit=19,file='euler/dx_uye.out',status='unknown')
-			!open(unit=20,file='euler/dx_uze.out',status='unknown')
-			!open(unit=21,file='euler/dy_uxe.out',status='unknown')
-			!open(unit=22,file='euler/dy_uye.out',status='unknown')
-			!open(unit=23,file='euler/dy_uze.out',status='unknown')
-			!open(unit=24,file='euler/dz_uxe.out',status='unknown')
-			!open(unit=25,file='euler/dz_uye.out',status='unknown')
-			!open(unit=26,file='euler/dz_uze.out',status='unknown')
-		end if 			
+			!open(unit=18,file=trim(cur_dir)//'/euler/dx_uxe.out',status='unknown')
+			!open(unit=19,file=trim(cur_dir)//'/euler/dx_uye.out',status='unknown')
+			!open(unit=20,file=trim(cur_dir)//'/euler/dx_uze.out',status='unknown')
+			!open(unit=21,file=trim(cur_dir)//'/euler/dy_uxe.out',status='unknown')
+			!open(unit=22,file=trim(cur_dir)//'/euler/dy_uye.out',status='unknown')
+			!open(unit=23,file=trim(cur_dir)//'/euler/dy_uze.out',status='unknown')
+			!open(unit=24,file=trim(cur_dir)//'/euler/dz_uxe.out',status='unknown')
+			!open(unit=25,file=trim(cur_dir)//'/euler/dz_uye.out',status='unknown')
+			!open(unit=26,file=trim(cur_dir)//'/euler/dz_uze.out',status='unknown')
+		end if 					
 	end subroutine open_output_files
 !--------------------------------------------------------------------------------------------
 
@@ -188,6 +232,15 @@
 		iseed =80629.0 + real(3.0*ThisTask)
 		n_cube = dfloat(n1)*dfloat(n2)*dfloat(n3)
     call random_number(ran)
+
+!$omp parallel &
+!$omp shared(Vk1,Vk2,Vk3,n2,n3,n1hf,iseed,den_state,n_cube) &
+!$omp private(i1,i2,i3,k1,k2,k3,ksqr,mshl,ik,ireal,iimag, & 
+!$omp ran,rk2,rk,ek1,vk,p11,p12,p31,p22,p33,p23,rk2inv, &
+!$omp ampli,Vk1_real,Vk1_imag,Vk2_real,Vk2_imag,Vk3_real,Vk3_imag) 
+!$omp do
+	
+	
 		do i3 = n3_low,n3_high
 			indx3 = i3 - n3_low + 1
 			k3 = (i3-1) - n3*(i3/(n1hf+1))	
@@ -203,11 +256,11 @@
           ek1 = 1.0d0*rk2*rk2*exp(-2.0d0*rk2)
 					vk =  dsqrt(ek1/(3*den_state(mshl)))
 					vk = vk * n_cube 
-					ireal=2*i1-1
+					ireal=2*i1-1 
 					iimag=2*i1
           if(k1.ne.0)then
-            call random_number(ran)
-            !ran = 1.0d0
+            !call random_number(ran)
+            ran = 0.6d0
           else
             ran = 0.0d0
           endif
@@ -252,6 +305,8 @@
 			enddo
 		enddo
 
+!$omp end do
+!$omp end parallel
 	
 		!		call apply_mask_on_Vk
 	  call rnkt_serial
@@ -283,20 +338,20 @@
 !		end if
 !		end do 
 	
-	else
-		do itask = 0, NTask-1
-			call MPI_Barrier(MPI_COMM_WORLD, ierror)
-			if (itask .eq. ThisTask ) then 
-				open(unit=11,file='Vk.in',form='unformatted',status='old')
-	  		read(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
-														  i1=1,n1+2),i2=1,n2),i3=1,local_n3)
-				close(11)
-	  		open(unit=12,file='VXW.in',form='unformatted',status='old')
-				read(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+	else	
+	
+			write(smallstring,'(g8.0)') ThisTask
+			bigstring=trim(cur_dir)//'/Vk'//'_'//trim(adjustl(smallstring))//'.in'
+			open(unit=11,file=bigstring,form='unformatted',status='old')
+  		read(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+													  i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+			close(11)
+
+			bigstring=trim(cur_dir)//'/VWk'//'_'//trim(adjustl(smallstring))//'.in'
+			open(unit=12,file=bigstring,form='unformatted',status='old')
+  		read(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
 													     i1=1,n1+2),i2=1,n2),i3=1,local_n3)
-				close(12)
-			end if 
-		end do
+			close(12)
 	endif
 
 !! ------------------------------------------------------------

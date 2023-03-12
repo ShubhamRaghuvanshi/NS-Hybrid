@@ -63,7 +63,7 @@ export OMP_NUM_THREADS=8
 
 (2) In order to run the executible with (say) 4 number of processsors do 
 
-mpirun -np 4 ./part.exe
+mpirun -np 4 ./part.exe (path to the output directory, which should also contain flu.in)
 
 (3) Extremely important to run 'killall part.exe' after you terminate the code
     with keyboard interrupt (say with 'Ctrl+C' or 'Ctrl+Z'). Otherwise some 

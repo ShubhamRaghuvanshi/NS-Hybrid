@@ -52,8 +52,8 @@
 
 !process related
 integer :: ThisTask, NTask, ierror, itask, iret, n_proc
-character(50) smallstring, cur_dir
-character(100) bigstring 
+character(100) smallstring, cur_dir
+character(200) bigstring 
 
 !data related
 integer (C_INTPTR_T) :: n1,n2,n3, n1h,n1hf
@@ -61,6 +61,8 @@ integer (C_INTPTR_T) :: alloc_local, local_n3_offset, local_n3
 real(C_DOUBLE), pointer :: r_data(:,:,:)
 complex(C_DOUBLE_COMPLEX), pointer :: c_data(:,:,:)
 integer*8 :: n3_low, n3_high, indx3
+
+integer :: data_scatter
 
 !! -----------For FFTW --------------------------------------
 	type(C_PTR) :: plan_r2c, plan_c2r, cdatar, cdatac

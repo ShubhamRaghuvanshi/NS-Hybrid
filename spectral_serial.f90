@@ -19,25 +19,29 @@
 	!character*500::cnpar,formp
 
 
+	data_scatter = 0 
 	!! % Initialise MPI and fftw_mpi--------------------------------
 	call	MPI_INIT(ierror)
 	call	MPI_Comm_rank(MPI_COMM_WORLD, ThisTask, ierror)
 	call	MPI_Comm_size(MPI_COMM_WORLD, NTask, ierror)
 	call  fftw_mpi_init()
 	call  dfftw_init_threads(iret)
-
+       ! call  omp_set_num_threads(4)
 	call get_command_argument(1,cur_dir)			
 	if( len( trim( cur_dir) ) < 2 ) then 
 		write(*,*) 'Output directory not provided, Aborting'
 		call endrun(214)
 	end if 	
 
+  call cpu_time(t1)
 	
 	call read_input_params
 
 	call open_output_files
 
 	call initialise_variable
+	
+
 	
 	call global_array
 
@@ -71,27 +75,45 @@
 	iter = 0 
 	cnt = 0      
 !	t1=OMP_get_wtime()
-	call cpu_time(t1)
+
 	do iouter = 1,maxiter/navg
 	  call MPI_Barrier(MPI_COMM_WORLD, ierror)
 		count_out=iouter
 
-	! Writing the real space velocities to the fil after every navg steps
 		if(mod(iter,navg) .eq. 0) then
-			write(fnum,'(g8.0)') iouter 
-			write(smallstring,'(g8.0)') ThisTask
-			bigstring=trim(cur_dir)//'/vel/Vk'//trim(adjustl(fnum))//'_'//trim(adjustl(smallstring))//'.in' 
-			open(unit=11,file=bigstring, status='unknown', action='write',form='unformatted')
-			write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
-				i1=1,n1),i2=1,n2),i3=1,local_n3)
-			close(11)
+			write(fnum,'(g8.0)') iouter
+			if (data_scatter .eq. 0) then 
+				do itask = 0, NTask-1
+					call MPI_Barrier(MPI_COMM_WORLD, ierror)
+					if (itask .eq. ThisTask ) then
+						open(unit=11,file=trim(cur_dir)//'/vel/Vk_'//trim(adjustl(fnum))//'.in',form='unformatted', & 
+                                          & access='stream' ,position='append')
+						write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+													  i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+						close(11)
 
-			bigstring=trim(cur_dir)//'/vel/VWk'//trim(adjustl(fnum))//'_'//trim(adjustl(smallstring))//'.in' 
-			open(unit=12,file=bigstring, status='unknown', action='write',form='unformatted')
-			write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
-														   i1=1,n1+2),i2=1,n2),i3=1,local_n3)
-			close(12)
-		end if 
+						open(unit=12,file=trim(cur_dir)//'/vel/VWk_'//trim(adjustl(fnum))//'.in',form='unformatted', &
+                                           & access='stream' ,position='append')
+						write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+													  i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+						close(12)				
+					end if
+				end do 	
+			else  
+				write(smallstring,'(g8.0)') ThisTask
+				bigstring=trim(cur_dir)//'/vel/Vk'//trim(adjustl(fnum))//'_'//trim(adjustl(smallstring))//'.in' 
+				open(unit=11,file=bigstring, form='unformatted', access='stream')
+				write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+					i1=1,n1),i2=1,n2),i3=1,local_n3)
+				close(11)
+
+				bigstring=trim(cur_dir)//'/vel/VWk'//trim(adjustl(fnum))//'_'//trim(adjustl(smallstring))//'.in' 
+				open(unit=12,file=bigstring, form='unformatted', access='stream')
+				write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+																 i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+				close(12)
+			endif 
+		end if
 
 	!! writing the spectra after every navg number of steps
 	!!------------------------------------------------------
@@ -150,22 +172,41 @@
 		enddo
 	enddo
 
-	!t2=OMP_get_wtime()
-	call cpu_time(t2)
+
 !! First write down the velocity arrays. 
 
-	write(smallstring,'(g8.0)') ThisTask
-	bigstring=trim(cur_dir)//'/Vk'//'_'//trim(adjustl(smallstring))//'.in'
-	open(unit=11,file=bigstring,form='unformatted',status='unknown')
-	write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
-											  i1=1,n1+2),i2=1,n2),i3=1,local_n3)
-	close(11)
+	if(mod(iter,navg) .eq. 0) then
+			if (data_scatter .eq. 0) then
+			do itask = 0, NTask-1
+				call MPI_Barrier(MPI_COMM_WORLD, ierror)
+				if (itask .eq. ThisTask ) then
+					open(unit=11,file=trim(cur_dir)//'/Vk.in', form='unformatted' ,access='stream',position='append')
+					write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+					close(11)
 
-	bigstring=trim(cur_dir)//'/VXW'//'_'//trim(adjustl(smallstring))//'.in'
-	open(unit=12,file=bigstring,form='unformatted',status='unknown')
-	write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
-											     i1=1,n1+2),i2=1,n2),i3=1,local_n3)
-	close(12)
+					open(unit=12,file=trim(cur_dir)//'/VWk.in', form='unformatted', access='stream' ,position='append')
+					write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+					close(12)				
+				end if
+			end do 	
+		else 
+			write(smallstring,'(g8.0)') ThisTask
+			bigstring=trim(cur_dir)//'/Vk'//'_'//trim(adjustl(smallstring))//'.in'
+			open(unit=11,file=bigstring,form='unformatted', access='stream')
+			write(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+			close(11)
+
+			bigstring=trim(cur_dir)//'/VWk'//'_'//trim(adjustl(smallstring))//'.in'
+			open(unit=12,file=bigstring,form='unformatted', access='stream')
+			write(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+															 i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+			close(12)
+		end if
+	end if 
+
 
 if (ThisTask .eq. 0) then
 	En = 0.0d0
@@ -247,15 +288,19 @@ end if
 
 !	call rfftwnd_f77_destroy_plan(plan_r2c)
 !	call rfftwnd_f77_destroy_plan(plan_c2r)
-
-	t=t2-t1
-	call MPI_Allreduce(t , t_all, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD, ierror)
-	if (ThisTask .eq. 0) then 
-		print*,"Time taken=",t_all/real(nthreads*NTask)
-	end if  
+        call cpu_time(t2)
+	t=(t2-t1)/real(nthreads)
+        write(*,*) "T = ", t, "nt = ",nthreads, "dt = ", t2-t1, "tt = ",ThisTask
+	call MPI_Allreduce(t , t_all, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD, ierror)
 !! %-------------*********************-------------------------------
 !! and end our program 		
 	call MPI_Finalize(ierror)	
+
+        if (ThisTask .eq. 0) then
+                print*,"Time taken=",t_all
+        end if
+
+
 	end program spectral_serial 
 	
 	

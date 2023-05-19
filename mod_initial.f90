@@ -44,7 +44,6 @@
 		!!
   	n1h = n1/2
   	n1hf = n1/2 + 1
-
 		!! ----------
   	alloc_local = fftw_mpi_local_size_3d(n3, n2, n1hf, MPI_COMM_WORLD, &
   	& local_n3, local_n3_offset)
@@ -154,15 +153,26 @@
 !------------------------------------------------------------------------------------------
 
 	subroutine open_output_files
+
+                do itask = 0, NTask-1
+                        call MPI_Barrier(MPI_COMM_WORLD, ierror)
+                        if (itask .eq. ThisTask ) then     
+                                write(*,*) "ThisTask", ThisTask
+                                !$OMP PARALLEL
+                                 write(*,*), "Hello from MPI process", ThisTask, "and Thread : ", OMP_GET_THREAD_NUM()
+                                !$OMP END PARALLEL
+                         end if 
+                end do 
+
+                !$OMP PARALLEL 
+                !call get_total_threads(nthreads) 
+                nthreads = omp_get_num_threads()
+                !$OMP END PARALLEL
+   
+
 		!---------------------
 		if (ThisTask .eq. 0) then 
 			!! %---read initial params ----
-			
-			!$OMP PARALLEL 
-			!$OMP MASTER
- 			call get_total_threads(nthreads) 
- 			!$OMP END MASTER
-			!$OMP END PARALLEL
 			
 			bigstring='rm -rf '//trim(cur_dir)//'/vel/'
 			!write(*,*) 'First command ',bigstring
@@ -337,22 +347,47 @@
 !		end do 	
 !		end if
 !		end do 
-	
+
 	else	
-	
+		if (data_scatter .eq. 0) then
+			do itask = 0, NTask-1
+				call MPI_Barrier(MPI_COMM_WORLD, ierror)
+				if (itask .eq. ThisTask ) then
+					bigstring=trim(cur_dir)//'/Vk.in'
+		                              write(*,*) "ThisTask = ", ThisTask, local_n3*ThisTask, storage_size(Vk1(1,1,1))/8
+					open(unit=11,file=bigstring,form='unformatted', access='stream', status='old')
+					read(11)(((Vk1(1,1,1),Vk2(1,1,1),Vk3(1,1,1), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3*ThisTask)
+					read(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+					close(11)
+
+
+					bigstring=trim(cur_dir)//'/VWk.in'
+					open(unit=12,file=bigstring,form='unformatted', access='stream' ,status='old')
+					read(12)(((VWk1(1,1,1),VWk2(1,1,1),VWk3(1,1,1), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3*ThisTask)
+					read(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+					close(12)
+					
+				end if
+			end do 	
+		else 
 			write(smallstring,'(g8.0)') ThisTask
 			bigstring=trim(cur_dir)//'/Vk'//'_'//trim(adjustl(smallstring))//'.in'
-			open(unit=11,file=bigstring,form='unformatted',status='old')
-  		read(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
-													  i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+			open(unit=11,file=bigstring,form='unformatted', access='stream' ,status='old')
+			read(11)(((Vk1(i1,i2,i3),Vk2(i1,i2,i3),Vk3(i1,i2,i3), &
+														i1=1,n1+2),i2=1,n2),i3=1,local_n3)
 			close(11)
 
 			bigstring=trim(cur_dir)//'/VWk'//'_'//trim(adjustl(smallstring))//'.in'
-			open(unit=12,file=bigstring,form='unformatted',status='old')
-  		read(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
-													     i1=1,n1+2),i2=1,n2),i3=1,local_n3)
+			open(unit=12,file=bigstring,form='unformatted', access='stream' ,status='old')
+			read(12)(((VWk1(i1,i2,i3),VWk2(i1,i2,i3),VWk3(i1,i2,i3), &
+														   i1=1,n1+2),i2=1,n2),i3=1,local_n3)
 			close(12)
-	endif
+		end if
+	end if					
 
 !! ------------------------------------------------------------
 	end subroutine initial_configuration

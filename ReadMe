@@ -55,7 +55,39 @@ export PATH=(path to mpi_install)/bin:$PATH
 //***************************************************//
 
 
-//**************RUNNING CODE VIA BASH********************//
+//**************RUNNING THE CODE ON Cluster********************//
+
+
+(1) On the ICTS cluster you could simply run the code using the "submit.sh" bash script. 
+
+(2) Number of cpu per process, number of nodes and number of MPI process per node respectively can be set 
+    in the submit.sh file by setting their corresponding varialbles. E.g. 
+	 
+	  "SBATCH --cpus-per-task=16" (sets number of cpu per task to 16 by setting the variable "SLURM_CPUS_PER_TASK")
+	  "SBATCH --nodes=4" (sets number of nodes to 4)
+	  "SBATCH --ntasks-per-node=2" (sets number of MPI process(task) per node)
+
+		The total number of MPI tasks across nodes has to be product of "nodes" and "ntasks-per-node" 
+		i.e. for the given example, it should be set as 
+		
+		"#SBATCH --ntasks=8" (sets the total number of MPI tasks by setting the variable "SLURM_NPROCS")  	  
+	  
+(3) Please also make sure that total time for simulation and allocates memory allow for the simulation
+    to complete.
+
+(4) The run command then takes all the values set in (2) and runs the code. It also writes the output of the 
+    simulation in the "simulation.log" file and timing information in "SimulationDetails.log" file. 
+
+(5) The program has been updated to read/write Vel files by combining data from all the processes. And without any 
+    modification the code with behave as such.
+
+(6) However in case of large data it is better to read/write many small files rather than on big file. In order to 
+    read/write Vel files seperately by each process, just set the variable "data_scatter" in the beginning of
+    spectral_serial.f90 to a non zero value.
+    
+           
+//**************RUNNING THE CODE ON Local computer********************//
+				 
 
 (1) Set the number of openmp threads to (say) 8 by
 
@@ -72,7 +104,9 @@ mpirun -np 4 ./part.exe (path to the output directory, which should also contain
     catch 'Ctrl+C' interrupt but not 'Ctrl+Z' so be careful with that.
     
 (4) Also run 'killall part.exe' in case the code encounters MPI communicator errors.    
-     	
+
+
+//**************Simulation Details********************//     	
 
 
 
